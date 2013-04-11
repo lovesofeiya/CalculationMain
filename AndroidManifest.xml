@@ -46,10 +46,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-           <activity
+        <activity
             android:name=".Calculate_history">
         </activity>
-        
+         <activity
+            android:name=".User_Signin">
+        </activity>
+         <activity
+            android:name=".User_Signup">
+        </activity>
        
     </application>
     

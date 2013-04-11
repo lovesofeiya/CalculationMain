@@ -56,7 +56,7 @@ public class Calculate_history extends Activity {
 	         
 	             HashMap<String, Object> map = new HashMap<String, Object>();
 	             map.put("date", "today");
-	        	 map.put("mile", "No record");
+	        	 map.put("mile", "3.1");
 	        	 map.put("startTime", "9:00:00");
 	        	 map.put("endTime", "12:00:00");
 	       	

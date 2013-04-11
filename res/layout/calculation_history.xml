@@ -13,13 +13,13 @@
 
           <LinearLayout
               android:layout_width="match_parent"
-              android:layout_height="fill_parent"
+              android:layout_height="match_parent"
               android:layout_gravity="center_vertical|center_horizontal" >
 
               <Button
                   android:id="@+id/goBack"
-                  android:layout_width="59dp"
-                  android:layout_height="46dp"
+                  android:layout_width="47dp"
+                  android:layout_height="30dp"
                   android:layout_marginLeft="10dp"
                   android:layout_marginTop="5dp"
                   android:background="@drawable/goback" />
@@ -28,7 +28,7 @@
                   android:layout_width="wrap_content"
                   android:layout_height="wrap_content"
                   android:layout_gravity="center_vertical|center_horizontal"
-                  android:layout_marginLeft="45dp"
+                  android:layout_marginLeft="50dp"
                   android:text="History"
                   android:textColor="#ffffff"
                   android:textSize="30sp" />
@@ -40,10 +40,10 @@
       <ListView
           android:id="@+id/historyList"
           android:layout_width="fill_parent"
+          android:layout_height="703dp"
+          android:layout_marginTop="5dp"
           android:divider="@null"
-          android:focusable="false"
-          android:layout_height="690dp"
-          android:layout_marginTop="15dp" >
+          android:focusable="false" >
 
     </ListView>
     
