@@ -33,7 +33,7 @@ android:background="@drawable/historyback">
 <com.google.android.maps.MapView
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/map_view"
-    android:layout_width="216dp"
+    android:layout_width="match_parent"
     android:layout_height="169dp"
     android:layout_gravity="center_horizontal"
     android:apiKey="0xlO4PZvcgkOrFb03XSRi_b7-BR1YijkWf_bDAQ"

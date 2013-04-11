@@ -22,6 +22,7 @@
                   android:layout_height="30dp"
                   android:layout_marginLeft="10dp"
                   android:layout_marginTop="5dp"
+                  android:onClick = "goBack"
                   android:background="@drawable/goback" />
 
               <TextView

@@ -65,6 +65,11 @@ public class Calculate_history extends Activity {
 	        return items;
 	    }
 	 
+		public void goBack(View view){
+			 Intent intent = new Intent();  
+			 intent.setClass(this, CalculationMain.class );
+		     startActivity(intent);
+		}
 	
 
 }

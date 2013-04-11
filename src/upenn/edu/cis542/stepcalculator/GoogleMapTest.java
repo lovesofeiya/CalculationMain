@@ -78,20 +78,20 @@ public class GoogleMapTest extends MapActivity {
      //   geoArrayList.add(gpoint3);
 	    
 	    if(location!=null){
-	    //	Toast.makeText(GoogleMapTest.this, "I get location!"+ location.getLatitude() +" "+location.getLatitude(), 10).show();
+	    	Toast.makeText(GoogleMapTest.this, "I get location!"+ location.getLatitude() +" "+location.getLatitude(), 10).show();
 	    //	updateToNewLocation(location);
 	    	getPoint(location);
 	    	startPoint = geoPoint;
 	    }
 	    else
-	    	Toast.makeText(GoogleMapTest.this, "no location",10).show();
+	    	Toast.makeText(GoogleMapTest.this, "no location to show",10).show();
 	    
 	    
         bitmap=BitmapFactory.decodeResource(getResources(), R.drawable.mapmarker);//生成bitmap位图
    
         
         mapView.setBuiltInZoomControls(true);//实现放大缩小功能
-        manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 3, new LocationListener() {
+        manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 6, new LocationListener() {
 			
 			@Override 
 				public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -114,7 +114,7 @@ public class GoogleMapTest extends MapActivity {
 				@Override
 				public void onLocationChanged(Location location) {
 					// TODO Auto-generated method stub
-					Toast.makeText(GoogleMapTest.this, "location change", 10).show();
+					Toast.makeText(GoogleMapTest.this, "location change", 3).show();
 				    getPoint(location);
 				}
 			});
@@ -146,35 +146,36 @@ public class GoogleMapTest extends MapActivity {
 			Projection projection=mapView.getProjection();
 			// 画笔   
             Paint paint = new Paint();   
-            paint.setColor(Color.RED);   
+            paint.setColor(Color.BLUE);   
             paint.setDither(true);   
             paint.setStyle(Paint.Style.STROKE);   
             paint.setStrokeJoin(Paint.Join.ROUND);   
             paint.setStrokeCap(Paint.Cap.ROUND);   
-            paint.setStrokeWidth(2);   
+            paint.setStrokeWidth(4);   
            // Projection projection = mapView.getProjection();  
             
             //if drawing path
-//            Point p1 = new Point();  
-//            Path path = new Path();  
-//            if(geoArrayList.size()>1){
-//	            //receive routh points from geoArrayList
-//				Iterator<GeoPoint> it = geoArrayList.iterator();
-//				//set the first point
-//				if(it.hasNext()){
-//					projection.toPixels(it.next(), p1); 
-//					path.moveTo(p1.x, p1.y);   
-//				}
-//					
-//				//set the rest points(from the 2nd)
-//				while (it.hasNext()){
-//					projection.toPixels(it.next(), p1);  
-//					path.lineTo(p1.x, p1.y);  
-//	           
-//				}
-//	 
-//	            canvas.drawPath(path, paint);// 画出路径   
-//            }
+            Point p1 = new Point();  
+            Path path = new Path();  
+            if(geoArrayList.size()>1){
+	            //receive routh points from geoArrayList
+				Iterator<GeoPoint> it = geoArrayList.iterator();
+				//set the first point
+				//if it has first point
+				if(it.hasNext()){
+					projection.toPixels(it.next(), p1); 
+					path.moveTo(p1.x, p1.y);   
+			
+				//set the rest points(from the 2nd)
+				while (it.hasNext()){
+					projection.toPixels(it.next(), p1);  
+					path.lineTo(p1.x, p1.y);  
+	           
+				}
+				}
+	 
+	            canvas.drawPath(path, paint);// 画出路径   
+            }
 			Toast.makeText(GoogleMapTest.this,"draw!!!!geopoint size is : "+ geoArrayList.size(),10).show();
 			Point point=new Point();//定义输出的像素点
 			projection.toPixels(startPoint, point);//地理坐标转为像素坐标

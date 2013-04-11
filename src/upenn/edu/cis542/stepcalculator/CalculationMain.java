@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
-
+import android.R.integer;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
@@ -19,6 +19,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.app.DialogFragment;
@@ -28,104 +29,199 @@ import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 public class CalculationMain extends FragmentActivity{
 	//for debug
+	boolean D = true;
 	String tag = "bluetoothTest";
-	
+
 	//bluetooth
 	//ListView listView;
 	private BluetoothAdapter BTAdapter; 
-	protected int BT_ENABLE_RETURN = 2;
-	
+	protected int BT_ENABLE_RETURN = 4;
+
 	ArrayAdapter<String> listAdapter;
 	Set<BluetoothDevice> devicesArray;
 	ArrayList<String> pairedDevices;
 	ArrayList<BluetoothDevice> devices;
-	
+
 	IntentFilter filter;
 	BroadcastReceiver receiver;
-	
+
     public static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
 	protected static final int SUCCESS_CONNECT = 0;
 	protected static final int MESSAGE_READ = 1;
-	
+	protected static final int CONNECTION_LOST = 2;
+	protected static final int CONNECT_FAIL = 3;
+
 	ConnectedThread connectedThread;
 	ConnectThread connect;
-	
+
+	boolean isConnected = false;
+	boolean isAppFinish = false;
+
 	//test bluetooth
 	TextView tv_contentTime;
-	
+
 	AlertDialog bTListDialog;
-	
+
     //set time parameters
-    private static final int msgKey1 = 2;
+	TimeThread timeThread;
+    private static final int msgKey1 = 4;
     long sysTime,iniTime;
     
     //set arduino data parameters
-    private int step;
-    private float speed;
+    private String stepStr;
+    private String speedStr;
     private float distance;
-    private long lat, lon;
+    private String latStr, lonStr;
+    private String xStr;
+    private String yStr;
+    private String zStr;
     private float calory;
-    TextView contentStep,contentSpeed, contentLat, contentLon, contentCal,contentDist;
-	
-	
+    private int preSteps = 0;
+    TextView contentStep,contentSpeed, contentLat, contentLon, contentCal,contentDist, contentAccel;
+
     Handler mHandler = new Handler()
     {
     	public void handleMessage(Message message)
     	{
-    		Log.d(tag, "handle message");
+    		if(D) Log.d(tag, "handle message");
     		super.handleMessage(message);
     		switch(message.what)
     		{
     		case SUCCESS_CONNECT:
-    			//Log.d(tag, "start connect");
+    			if(D) Log.d(tag, "HANDLE, start connect");
     			connectedThread = new ConnectedThread((BluetoothSocket)message.obj);
     			String s = "successfully connected";
     			connectedThread.write(s.getBytes());
-    			//Log.d(tag, "connected");
-    			
     			//dismiss the search list dialog
-    			bTListDialog.dismiss();
-    			Toast.makeText(getApplicationContext(), "connected", 0).show();
+    			//Toast.makeText(getApplicationContext(), "connected", Toast.LENGTH_SHORT).show();
     			connectedThread.start();
+    	        if(!isConnected)	isConnected = true;
+    			bTListDialog.dismiss();
+    			//start timer
+    	        //init time
+    			if(iniTime<1)
+    			{
+            	    iniTime = System.currentTimeMillis();
+        	        timeThread = new TimeThread();
+        	        timeThread.start();
+    			}
+
     			break;
-    		
     		case MESSAGE_READ:
-    			byte[] readBuf = (byte[])message.obj;
-    			String string = new String(readBuf);
+    			//read in data
+    			String str = (String)message.obj;
     			//Toast.makeText(getApplicationContext(), string, 0).show();
-    			Log.d(tag, "read");
-    			tv_contentTime.setText(string);
-    			break;
+    			Log.d(tag, "read message: "+str);
+    			int start = str.indexOf(' ');
+    			int end = str.indexOf(' ', start+1);
+    			stepStr = str.substring(start+1, end);
     			
+    			int steps;
+    			try
+    			{
+    				 steps = Integer.parseInt(stepStr);
+    			}
+    			catch (NumberFormatException e) {
+					// TODO: handle exception
+    				Log.d(tag, "steps wrong");
+    				break;
+				}
+    			
+    			Log.d(tag, "steps " + steps + "; " + preSteps);
+    			if(steps<preSteps||(steps-preSteps)>20)
+    				break;
+    			preSteps = steps;
+    			
+    			contentStep.setText(stepStr);  
+    			
+     			
+    			//calculate calory and distance
+    			calory = 0.05f * steps;
+    			contentCal.setText(String.format("%.2f", calory));
+    			distance = 1.0f/2000.0f * steps;
+    			contentDist.setText(String.format("%.5f", distance));
+    			
+    			start = end;
+    			end = str.indexOf( ' ', end+1);
+    			if(start<end)
+    				xStr = str.substring(start+1, end);
+    			else {
+					break;
+				}
+    			
+    			start = end;
+    			end = str.indexOf( ' ', end+1);
+    			if(start<end)
+    				yStr = str.substring(start+1, end);
+    			else break;
+    			
+    			start = end;
+    			end = str.indexOf( ' ', end+1);
+    			if(start<end)
+    				zStr = str.substring(start+1, end);
+    			else break;
+    			
+    			contentAccel.setText(xStr + " " + yStr + " " + zStr);
+    			
+    			start = end;
+    			end = str.indexOf( ' ', end+1);
+    			if(start<end)
+    				latStr = str.substring(start+1, end);
+    			else break;
+    			contentLat.setText(latStr);
+    			
+    			start = end;
+    			end = str.indexOf( ' ', end+1);
+    			if(start<end)
+    				lonStr = str.substring(start+1, end);
+    			else break;
+    			contentLon.setText(lonStr);
+    			
+    			start = end;
+    			if(start<end)
+    				speedStr = str.substring(start+1);
+    			else break;
+    			contentSpeed.setText(speedStr);
+   
+    			
+    			Log.d(tag, "HANDLE, read");
+
+    			break;
+    		case CONNECTION_LOST: 
+    			Log.d(tag, "HANDLE, connection lost");
+    			isConnected = false;
+    			showAlertDialog("Lost connection. Do you want to reconnect?");  
+    			break;
+    		case CONNECT_FAIL: 
+    			Log.d(tag, "HANDLE, connec fail");
+    			Toast.makeText(getApplicationContext(), "connect fail, check if the port is open", Toast.LENGTH_SHORT).show();
+    			break;
 			case msgKey1:
+				Log.d(tag, "HANDLE, timer");
 	             sysTime = System.currentTimeMillis() - iniTime;
-	
+
 	             sysTime/=1000;
 	             int hour = (int) (sysTime/3600);
 	             int min = (int)(sysTime - hour*3600)/60;
 	             int sec = (int)(sysTime%3600)%60;
-	             
+
 	             tv_contentTime.setText(hour+"'"+min+"''"+sec);
 	             break;
-	             
+
 			default:
-                break;
+               break;
+    			
     		}
     	}
     };
     
-
-	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -133,15 +229,12 @@ public class CalculationMain extends FragmentActivity{
         
         tv_contentTime = (TextView)findViewById(R.id.content_time);
         
-        initBluetoth();
-        
-        //init time
-        iniTime = System.currentTimeMillis();
-        new TimeThread().start();
+        initBluetoth();  
         
         //init android-arduino parameters
         contentSpeed = (TextView)findViewById(R.id.content_speed);
         contentCal = (TextView)findViewById(R.id.content_calory);
+        //contentAccel = (TextView)findViewById(R.id.content_accel);
         contentLat = (TextView)findViewById(R.id.content_latitute);
         contentLon = (TextView)findViewById(R.id.content_lontitute);
         contentStep = (TextView)findViewById(R.id.content_step);
@@ -151,12 +244,21 @@ public class CalculationMain extends FragmentActivity{
     private void startBTSearch() {
 		// TODO Auto-generated method stub
 		//clear data first
-		pairedDevices.clear();
-		listAdapter.clear();
-		getPairedBluetooth();
-		startDiscovery();
-		
-		showBTListDialog();
+    	
+    	if(!isConnected)
+    	{
+    		pairedDevices.clear();
+    		listAdapter.clear();
+    		devices.clear();
+    		getPairedBluetooth();
+    		startDiscovery();
+    		
+    		showBTListDialog();
+    		
+    		return;
+    	}
+ 
+		showAlertDialog("Bluetooth is connected to one device, do you want to disconnet it and reconnect?");
 	}
 
 	private void initBluetoth() {
@@ -206,16 +308,17 @@ public class CalculationMain extends FragmentActivity{
     		    
     		    else if(BluetoothAdapter.ACTION_STATE_CHANGED.equals(action))
     		    {
-    		    	//when you run the app, someone turn off the bt
-    		    	if(BTAdapter.getState() == BluetoothAdapter.STATE_OFF)
-    		    	{
-    		    		//Log.d(tag, "bluetooth turned off");
-    		    		turnOnBT();
-    		    	}   		    		
+//    		    	//when you run the app, someone turn off the bt
+//    		    	if(BTAdapter.getState() == BluetoothAdapter.STATE_OFF)
+//    		    	{
+//    		    		//Log.d(tag, "bluetooth turned off");
+//    		    		isConnected = false;
+//    		    		turnOnBT();
+//    		    	}   		    		
     		    }
 		    }
 		};
-		
+
 		registerReceiver(receiver, filter);
 		 filter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
 		registerReceiver(receiver, filter);
@@ -233,7 +336,16 @@ public class CalculationMain extends FragmentActivity{
 		unregisterReceiver(receiver);
 		//shup down the connection
 		if(connectedThread != null)
+		{
+			isAppFinish = true;
 			connectedThread.cancel();
+		}
+
+		if(timeThread!=null)
+		{
+			timeThread.setContinue(false);
+		}
+
 	}
     
 	@Override
@@ -258,8 +370,8 @@ public class CalculationMain extends FragmentActivity{
     			turnOnBT();
     			//Log.d("bluetoothTest", "3");
     		}
-    		
-    		startBTSearch();
+    		else
+    			startBTSearch();
 		}
     }
     
@@ -288,7 +400,6 @@ public class CalculationMain extends FragmentActivity{
 		    }
 		}
 	}
-
     
     //after trying to open bluetooth
     //onActivityResult will be called before onResume, so we cannot show the dialog here
@@ -309,7 +420,6 @@ public class CalculationMain extends FragmentActivity{
     	
     }
 
-
 	public static class BTErrorDialogFragment extends DialogFragment {
 	    String m_message;
 
@@ -323,7 +433,7 @@ public class CalculationMain extends FragmentActivity{
 
 	        return f;
 	    }
-		
+
 		@Override
 	    public Dialog onCreateDialog(Bundle savedInstanceState) {
 	    	m_message = getArguments().getString("message");
@@ -342,7 +452,7 @@ public class CalculationMain extends FragmentActivity{
 		}		 
 	}
           
-	
+
 	void showBTErrorDialog(String message) {
 
 	    // DialogFragment.show() will take care of adding the fragment
@@ -361,7 +471,7 @@ public class CalculationMain extends FragmentActivity{
 		ft.commitAllowingStateLoss();
 //	    newFragment.show(ft, "dialog");
 	}
-	
+
 	void showBTListDialog()
 	{
 		//list view dialog
@@ -374,68 +484,107 @@ public class CalculationMain extends FragmentActivity{
 				{
 					BTAdapter.cancelDiscovery();
 				}
-				
+
 				//Log.d(tag, "paired device is selected");
 				BluetoothDevice selectedDevice = devices.get(which);
-				Toast.makeText(getApplicationContext(), selectedDevice.getName() + " is selected" , Toast.LENGTH_LONG).show();
+				Toast.makeText(getApplicationContext(), selectedDevice.getName() + " is selected" , Toast.LENGTH_SHORT).show();
 				connect = new ConnectThread(selectedDevice);
 				connect.start();
-	
+
 				//dialog.dismiss();
 				}
 			})
 		.setNegativeButton("Cancel", null).show();
 	}
-	
-	
+
+	//show an alertdialog suggesting if reconnect
+	void showAlertDialog(String message)
+	{
+		new AlertDialog.Builder(this)
+		.setIcon( android.R.drawable.ic_dialog_alert)
+		.setMessage(message)
+		.setNegativeButton("Cancel", null)
+		.setPositiveButton("Yes", new DialogInterface.OnClickListener() 
+		{
+            public void onClick(DialogInterface dialog, int id) 
+            {
+            	//cancel the connection and research
+            	if(isConnected)
+            	{
+            		connectedThread.cancel();
+            	}
+            	else 
+            	{
+					turnOnBT();
+				}
+            }
+		}).show();
+	}
+
+	//Bluetooth
+
+    private void connectionLost() {
+		// TODO Auto-generated method stub
+    	 mHandler.obtainMessage(CONNECTION_LOST).sendToTarget();
+	}
+    
+    private void connectFail() {
+		// TODO Auto-generated method stub
+    	mHandler.obtainMessage(CONNECT_FAIL).sendToTarget();
+	}
+
 	private class ConnectThread extends Thread {
 
 		private final BluetoothSocket mmSocket;
 	    private final BluetoothDevice mmDevice;
-	 
+
 	    public ConnectThread(BluetoothDevice device) {
-	    	Log.d(tag, "build connect");
+	    	if(D) Log.d(tag, "build connect");
 	        // Use a temporary object that is later assigned to mmSocket,
 	        // because mmSocket is final
 	        BluetoothSocket tmp = null;
 	        mmDevice = device;
-	 
+
 	        // Get a BluetoothSocket to connect with the given BluetoothDevice
 	        try {
-                Log.d(tag, "try0");
 	            // MY_UUID is the app's UUID string, also used by the server code
 	            tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
-	        } catch (IOException e) { Log.d(tag, "catch0"); }
+	        } catch (IOException e) 
+	        { 
+	        	if(D) Log.d(tag, "socket created failed"); 
+	        }
 	        mmSocket = tmp;
 	    }
-	 
-	    public void run() {
+
+		public void run() {
 	    	Log.d(tag, "run connect");
 	        // Cancel discovery because it will slow down the connection
 	        BTAdapter.cancelDiscovery();
-	 
+
 	        try {
 	            // Connect the device through the socket. This will block
 	            // until it succeeds or throws an exception
-	            Log.d(tag, "try1");
 	            mmSocket.connect();
 
 	        } catch (IOException connectException) {
 	            // Unable to connect; close the socket and get out
-	        	Log.d(tag, "catch1");
-	            try {
-	                Log.d(tag, "try2");
+	        	if(D) Log.d(tag, "socket connect failed");
+	        	connectFail();
+	            try {	                
 	                mmSocket.close();
 
-	            } catch (IOException closeException) { Log.d(tag, "catch2");}
+	            } catch (IOException closeException) 
+	            { 
+	            	if(D) Log.d(tag, "socket close failed"); 
+	            	connectFail();
+	            }
 	            return;
 	        }
-	 
+
 	        // Do work to manage the connection (in a separate thread)
-	        Log.d(tag, "about to handle");
 	        mHandler.obtainMessage(SUCCESS_CONNECT, mmSocket).sendToTarget();
 	    }
-	    
+
 
 		/** Will cancel an in-progress connection, and close the socket */
 	    public void cancel() {
@@ -444,82 +593,140 @@ public class CalculationMain extends FragmentActivity{
 	        } catch (IOException e) { }
 	    }
 	}
-	
+
+
+
 	private class ConnectedThread extends Thread {
 	    private final BluetoothSocket mmSocket;
 	    private final InputStream mmInStream;
 	    private final OutputStream mmOutStream;
-	 
+
+	    private String readMessage = "";
+
 	    public ConnectedThread(BluetoothSocket socket) {
 	        mmSocket = socket;
 	        InputStream tmpIn = null;
 	        OutputStream tmpOut = null;
-	 
+
 	        // Get the input and output streams, using temp objects because
 	        // member streams are final
 	        try {
-	        	Log.d(tag, "try connected");
 	            tmpIn = socket.getInputStream();
 	            tmpOut = socket.getOutputStream();
-	        } catch (IOException e) { Log.d(tag, "catch connected"); }
-	 
+	        } catch (IOException e) { if(D) Log.d(tag, "tmp socket not connected"); }
+
 	        mmInStream = tmpIn;
 	        mmOutStream = tmpOut;
 	    }
-	 
+
 	    public void run() {
-	        byte[] buffer;  // buffer store for the stream
+	    	byte[] buffer = new byte[256];  // buffer store for the stream
 	        int bytes; // bytes returned from read()
-	 
+	        if(D) Log.d(tag, "run connection"); 
+
 	        // Keep listening to the InputStream until an exception occurs
 	        while (true) {
-	            try {
-	            	Log.d(tag, "try read");
+                try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+	            try {	            	
+	            	Log.d(tag, "skfjksjfksjglajfgak");
 	                // Read from the InputStream
-	            	buffer = new byte[1024];
-	            	Log.d(tag, "try read1");
+	            	//buffer = new byte[1024];
 	                bytes = mmInStream.read(buffer);
 	                // Send the obtained bytes to the UI activity
-	                
-	                mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-	                        .sendToTarget();
-	            } catch (IOException e) { Log.d(tag, "read catch");
+	                Log.d(tag, "new string "+new String(buffer));
+	                readMessage += new String(buffer);
+	                int start, end;
+	                if(((start = (readMessage.indexOf('$')))!=-1))
+	                {
+	                	Log.d(tag, "start" + start);
+	                	if((end = (readMessage.indexOf('@', start+1)))!=-1)
+	                	{
+	                		Log.d(tag, "end" + end);
+	                		String str = readMessage.substring(start+1, end);
+	                		if(readMessage.length() == end+1)
+	                			readMessage = "";
+	                		else {
+		                		readMessage = readMessage.substring(end+1);
+							}
+
+	    	                Log.d(tag, str);
+	    	                mHandler.obtainMessage(MESSAGE_READ, bytes, -1, str)
+	    	                        .sendToTarget();
+	                	}
+	                }
+	            } catch (IOException e) { 
+	            	if(D) Log.d(tag, "connection start failed"); 
+	            	if(!isAppFinish&&isConnected)
+	            		connectionLost();
+	            	else if(!isConnected)
+	            		connectFail();
 	                break;
-	            }
+	            } 
+
 	        }
 	    }
-	 
-	    /* Call this from the main activity to send data to the remote device */
+
+
+		/* Call this from the main activity to send data to the remote device */
 	    public void write(byte[] bytes) {
 	        try {
 	            mmOutStream.write(bytes);
 	        } catch (IOException e) { }
 	    }
-	 
+
 	    /* Call this from the main activity to shutdown the connection */
 	    public void cancel() {
+	    	Log.d(tag, "asdfadfa");
 	        try {
 	            mmSocket.close();
+	            //
+	            isConnected = false;
 	        } catch (IOException e) { }
 	    }
 	}
-	
+
 	//set time thread
-	 public class TimeThread extends Thread {
-	        @Override
-	        public void run () {
-	             do {
-	                 try {
-	                    Thread.sleep(1000);
-	                    Message msg = new Message()    ;
-	                    msg.what = msgKey1;
-	                    mHandler.sendMessage(msg);
-	               }
-	                catch (InterruptedException e) {
-	                    e.printStackTrace();
-	                 }
-	            } while(true);
-	         }
+	 public class TimeThread extends Thread 
+	 {
+		 private boolean shouldContinue = true;
+	    @Override
+	    public void run () 
+	    {
+	    	do 
+	    	{
+	    		try 
+			    {
+			        Thread.sleep(1000);
+			        Message msg = new Message();
+			        msg.what = msgKey1;
+			        mHandler.sendMessage(msg);
+			    }
+			    catch (InterruptedException e) 
+			    {
+			        e.printStackTrace();
+			    }
+	        } while(shouldContinue);
 	     }
-	     
+
+		 public void setContinue(boolean t_shouldContinue) { shouldContinue = t_shouldContinue; }
+	 }
+
+	 public void shareIt(View view){
+	    	Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);  
+	    	sharingIntent.setType("text/plain"); 
+	    	String shareBody = "Here is the share content body";  
+	    	sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Subject Here");  
+	    	sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);  
+	    	startActivity(Intent.createChooser(sharingIntent,"Share via"));
+	    }
+	 public void gotoHistory(View view){
+	    	Intent historyIntent = new Intent();  
+	    	historyIntent.setClass(this, Calculate_history.class );
+	        startActivity(historyIntent);
+	    }
 }
